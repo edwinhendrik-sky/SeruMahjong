@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Seru! Mahjong – Booking Meja</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<style>
+:root{--bg:#FCF8F2;--card:#fff;--ink:#0F2D52;--mute:#5b6b80;--line:#e3dccf;--sage:#B5CC95;--blue:#8FB0DD;--acc:#E8832A;--gray:#cfd3d8;--kit:#A9C1CD;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--bg:#0d1a2b;--card:#15263d;--ink:#eef2f8;--mute:#a3b2c5;--line:#2a3d57;--gray:#3a4655;--kit:#3b5568;color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.45;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+main{max-width:640px;margin:0 auto;padding:16px}
+h1{font-size:1.5rem;margin:0}h1 span{color:var(--acc)}
+.sub{color:var(--mute);margin:2px 0 14px;font-size:.9rem}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+h2{font-size:1rem;margin:0 0 10px}
+.row{display:flex;gap:8px;flex-wrap:wrap}.col{flex:1;min-width:130px}
+label{font-size:.8rem;color:var(--mute);display:block;margin-bottom:3px}
+input,select{width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);font-size:1rem}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{padding:9px 14px;border:1px solid var(--line);border-radius:999px;background:var(--bg);color:var(--ink);cursor:pointer;font-size:.9rem}
+.chip.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+svg{width:100%;height:auto;display:block}
+.tbl{cursor:pointer}.tbl.busy{cursor:not-allowed}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:.8rem;color:var(--mute);margin-top:8px}
+.dot{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+table{width:100%;border-collapse:collapse;font-size:.9rem}td{padding:5px 0}
+.tot td{border-top:1px solid var(--line);font-weight:700;padding-top:8px}.r{text-align:right}
+button.main,a.main{display:block;width:100%;padding:14px;border:0;border-radius:12px;background:var(--acc);color:#fff;font-weight:700;font-size:1rem;cursor:pointer;text-align:center;text-decoration:none}
+button.main:disabled{background:var(--gray);color:var(--mute);cursor:not-allowed}
+.note{font-size:.8rem;color:var(--mute)}.err{color:var(--acc);font-size:.85rem}
+.hide{display:none}.code{font-size:1.6rem;letter-spacing:.15em;font-weight:800;color:var(--acc);text-align:center}
+.bk{border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:8px;font-size:.9rem}
+.bk .b{padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);cursor:pointer;margin:6px 6px 0 0;text-decoration:none;display:inline-block;font-size:.85rem}
+.st{font-weight:700}.st.pending{color:var(--acc)}.st.approved{color:#2e8b57}.st.rejected,.st.cancelled{color:var(--mute)}
+</style>
+</head>
+<body>
+<main>
+<h1>Seru! <span>Mahjong</span></h1>
+<p class="sub">Tanya Social House · buka 15:00–00:00 · 08:00–15:00 by request</p>
+
+<!-- PELANGGAN -->
+<div id="cust">
+<div class="card"><h2>1 · Tanggal, jam &amp; durasi</h2>
+<div class="row"><div class="col"><label for="d">Tanggal</label><input type="date" id="d"></div>
+<div class="col"><label for="s">Jam mulai</label><select id="s"></select></div></div>
+<label style="margin-top:10px">Durasi</label><div class="chips" id="dur"></div>
+<p class="note" id="dayinfo" style="margin:8px 0 0"></p></div>
+
+<div class="card"><h2>2 · Pilih meja</h2>
+<div class="chips" style="margin-bottom:8px" id="flt"></div>
+<svg id="map" viewBox="0 0 400 450" role="img" aria-label="Denah ruang mahjong"></svg>
+<div class="legend"><span><i class="dot" style="background:var(--sage)"></i>Manual</span><span><i class="dot" style="background:var(--blue)"></i>Otomatis</span><span><i class="dot" style="background:var(--gray)"></i>✕ Terisi</span><span><i class="dot" style="background:var(--acc)"></i>Dipilih</span></div></div>
+
+<div class="card" id="sum"><h2>3 · Ringkasan &amp; data diri</h2>
+<table id="rows"></table>
+<div class="row" style="margin-top:12px">
+<div class="col"><label for="n">Nama</label><input id="n" placeholder="Nama lengkap"></div>
+<div class="col"><label for="w">No. WhatsApp</label><input id="w" inputmode="tel" placeholder="08xxxxxxxxxx"></div>
+<div class="col" style="max-width:110px"><label for="p">Pemain</label><select id="p"><option>1</option><option>2</option><option>3</option><option selected>4</option></select></div></div>
+<p class="err" id="err"></p>
+<button class="main" id="go" disabled>Pilih meja dulu</button></div>
+
+<div class="card hide" id="done"><h2>Booking tercatat 🎉</h2><div class="code" id="bc"></div><p id="bd"></p>
+<p class="note">Booking sah setelah admin mengonfirmasi lewat WhatsApp.</p>
+<button class="main" onclick="location.reload()">Booking lagi</button></div>
+</div>
+
+<!-- ADMIN: buka dengan #admin -->
+<div id="adm" class="hide">
+<div class="card" id="login"><h2>Login admin</h2>
+<label for="em">Email</label><input id="em" type="email"><label for="pw" style="margin-top:8px">Password</label><input id="pw" type="password">
+<p class="err" id="lerr"></p><button class="main" id="lgo">Masuk</button></div>
+<div id="panel" class="hide"><div class="card"><div class="row"><div class="col"><label for="ad">Tanggal</label><input type="date" id="ad"></div>
+<div class="col" style="align-self:end"><button class="main" id="ref">Muat ulang</button></div></div></div>
+<div id="list"></div><button class="chip" id="out">Keluar</button></div>
+</div>
+</main>
+
+<script>
+/* ====== ISI DUA BARIS INI (Supabase → Project Settings → API) ====== */
+const SB_URL="ISI_PROJECT_URL",SB_KEY="ISI_ANON_PUBLIC_KEY",WA="6285111771511";
+/* =================================================================== */
+const db=supabase.createClient(SB_URL,SB_KEY);
+const PRICE={auto:{wd:[99000,239000],we:[119000,299000]},manual:{wd:[65000,165000],we:[75000,195000]}};
+const TABLES=[{id:"M4",t:"manual",x:325,y:95},{id:"M3",t:"manual",x:290,y:200},{id:"M2",t:"manual",x:325,y:310},{id:"A1",t:"auto",x:185,y:310},{id:"M1",t:"manual",x:65,y:310}];
+const $=id=>document.getElementById(id),pad=n=>String(n).padStart(2,"0"),rp=n=>"Rp"+n.toLocaleString("id-ID");
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const ts=(d,h)=>new Date(new Date(d+"T00:00:00Z").getTime()+h*3600000).toISOString().slice(0,19);
+const now=new Date(),todayStr=now.getFullYear()+"-"+pad(now.getMonth()+1)+"-"+pad(now.getDate());
+const st={dur:1,sel:null,flt:"all",av:[]};
+const dEl=$("d"),sEl=$("s");dEl.value=dEl.min=$("ad").value=todayStr;
+for(let h=8;h<=23;h++){const o=document.createElement("option");o.value=h;o.textContent=pad(h)+":00"+(h<15?" (request)":"");if(h==15)o.selected=true;sEl.appendChild(o)}
+[1,2,3,4,5,6].forEach(h=>{const b=document.createElement("button");b.className="chip";b.dataset.h=h;b.textContent=h==3?"3 jam (paket)":h+" jam";b.onclick=()=>{st.dur=h;render()};$("dur").appendChild(b)});
+[["all","Semua"],["auto","Otomatis"],["manual","Manual"]].forEach(([k,l])=>{const b=document.createElement("button");b.className="chip";b.dataset.k=k;b.textContent=l;b.onclick=()=>{st.flt=k;render()};$("flt").appendChild(b)});
+dEl.onchange=sEl.onchange=()=>{st.sel=null;loadAv()};
+const isWE=()=>{const g=new Date(dEl.value+"T00:00:00").getDay();return g==0||g==6};
+async function loadAv(){const {data}=await db.from("availability").select("*").gte("start_ts",ts(dEl.value,0)).lt("start_ts",ts(dEl.value,24));st.av=data||[];render()}
+function free(id){const s=+sEl.value;if(s+st.dur>24)return false;const a=ts(dEl.value,s),b=ts(dEl.value,s+st.dur);return !st.av.some(r=>r.table_id==id&&r.start_ts<b&&r.end_ts>a)}
+function calc(type,d){const [p1,p3]=PRICE[type][isWE()?"we":"wd"];const n3=Math.floor(d/3),r=d%3,rows=[];
+ if(n3)rows.push([n3+" × paket 3 jam",n3*p3]);if(r){const a=r*p1;rows.push(a>p3?["Paket 3 jam (lebih hemat dari "+r+" jam)",p3]:[r+" × 1 jam",a])}
+ const total=rows.reduce((a,b)=>a+b[1],0);return{rows,total,save:d*p1-total}}
+const chair=(x,y)=>`<rect x="${x-9}" y="${y-9}" width="18" height="18" rx="4" fill="none" stroke="var(--ink)" stroke-opacity=".5" transform="rotate(45 ${x} ${y})"/>`;
+function render(){
+ document.querySelectorAll("#dur .chip").forEach(b=>b.classList.toggle("on",+b.dataset.h==st.dur));
+ document.querySelectorAll("#flt .chip").forEach(b=>b.classList.toggle("on",b.dataset.k==st.flt));
+ const we=isWE(),s=+sEl.value,req=s<15;
+ $("dayinfo").innerHTML=(we?"Weekend":"Weekday")+" · selesai "+pad((s+st.dur)%24)+":00"+(s+st.dur>24?" (melewati jam tutup)":"")+(req?"<br><b style=\"color:var(--acc)\">Jam 08:00–15:00 = request, menunggu persetujuan admin. Jika tidak disetujui, booking dibatalkan.</b>":"");
+ if(st.sel&&!free(st.sel))st.sel=null;
+ let g=`<rect x="8" y="8" width="384" height="370" rx="18" fill="none" stroke="var(--ink)" stroke-width="4"/>
+ <path d="M8 26Q8 8 26 8H150V90L120 120H8Z" fill="var(--kit)" fill-opacity=".55"/>
+ <text x="20" y="55" font-size="15" font-style="italic" fill="var(--ink)">Area Kitchen</text><text x="205" y="30" font-size="12" font-style="italic" fill="var(--ink)">Toilet</text>
+ <circle cx="200" cy="215" r="34" fill="none" stroke="var(--acc)" stroke-dasharray="4 3"/>
+ <text x="200" y="212" text-anchor="middle" font-size="8" font-weight="700" fill="var(--acc)">AREA</text><text x="200" y="222" text-anchor="middle" font-size="8" font-weight="700" fill="var(--acc)">SIRKULASI</text>
+ <line x1="206" y1="45" x2="206" y2="175" stroke="var(--acc)" stroke-dasharray="5 4"/><line x1="206" y1="256" x2="206" y2="352" stroke="var(--acc)" stroke-dasharray="5 4"/><line x1="160" y1="215" x2="40" y2="215" stroke="var(--acc)" stroke-dasharray="5 4"/>
+ <rect x="236" y="374" width="150" height="9" rx="2" fill="none" stroke="var(--ink)" stroke-width="2"/><text x="240" y="412" font-size="11" font-weight="700" fill="var(--ink)">▲ PINTU MASUK</text>
+ <rect x="8" y="378" width="205" height="50" fill="none" stroke="var(--ink)" stroke-width="2" stroke-dasharray="3 3"/><text x="110" y="408" text-anchor="middle" font-size="10" fill="var(--mute)">Tangga</text>`;
+ TABLES.forEach(t=>{const f=free(t.id),sel=st.sel==t.id,dim=st.flt!="all"&&st.flt!=t.t;
+  const fill=sel?"var(--acc)":!f?"var(--gray)":t.t=="auto"?"var(--blue)":"var(--sage)";
+  g+=`<g opacity="${dim?.25:1}" class="tbl ${f?"":"busy"}" data-id="${t.id}" tabindex="${f&&!dim?0:-1}" role="button" aria-label="Meja ${t.id} ${f?"tersedia":"terisi"}">`;
+  [[-28,-28],[28,-28],[-28,28],[28,28]].forEach(c=>g+=chair(t.x+c[0],t.y+c[1]));
+  g+=`<rect x="${t.x-26}" y="${t.y-26}" width="52" height="52" rx="8" fill="${fill}" stroke="var(--ink)" stroke-opacity=".6" transform="rotate(45 ${t.x} ${t.y})"/>
+  <text x="${t.x}" y="${t.y+6}" text-anchor="middle" font-size="17" font-weight="800" fill="${sel?"#fff":"#0F2D52"}">${t.id}</text>${f?"":`<text x="${t.x}" y="${t.y+20}" text-anchor="middle" font-size="9" font-weight="700" fill="#0F2D52">✕ terisi</text>`}</g>`});
+ $("map").innerHTML=g;
+ document.querySelectorAll(".tbl").forEach(e=>{const pick=()=>{const t=TABLES.find(x=>x.id==e.dataset.id);if(!free(t.id)||(st.flt!="all"&&st.flt!=t.t))return;st.sel=t.id;render()};
+  e.onclick=pick;e.onkeydown=k=>{if(k.key=="Enter"||k.key==" "){k.preventDefault();pick()}}});
+ const t=TABLES.find(x=>x.id==st.sel);
+ if(!t){$("rows").innerHTML=`<tr><td class="note">Belum ada meja dipilih</td></tr>`;$("go").disabled=true;$("go").textContent="Pilih meja dulu";return}
+ const c=calc(t.t,st.dur);
+ let h=`<tr><td>Meja ${t.id} (${t.t=="auto"?"Otomatis":"Manual"})</td><td class="r">${we?"Weekend":"Weekday"}</td></tr><tr><td>${dEl.value} · ${pad(s)}:00–${pad((s+st.dur)%24)}:00</td><td class="r">${st.dur} jam</td></tr>`;
+ c.rows.forEach(r=>h+=`<tr><td>${r[0]}</td><td class="r">${rp(r[1])}</td></tr>`);
+ if(c.save>0)h+=`<tr><td style="color:var(--acc)">Hemat dengan paket</td><td class="r" style="color:var(--acc)">${rp(c.save)}</td></tr>`;
+ $("rows").innerHTML=h+`<tr class="tot"><td>Total</td><td class="r">${rp(c.total)}</td></tr>`;
+ $("go").disabled=false;$("go").textContent=(req?"Kirim request · ":"Booking · ")+rp(c.total)}
+$("go").onclick=async()=>{
+ const n=$("n").value.trim(),w=$("w").value.replace(/\D/g,"");
+ if(n.length<2){$("err").textContent="Isi nama dulu.";return}if(w.length<9){$("err").textContent="Nomor WhatsApp belum valid.";return}
+ $("err").textContent="";$("go").disabled=true;
+ const t=TABLES.find(x=>x.id==st.sel),c=calc(t.t,st.dur),s=+sEl.value,req=s<15,d=dEl.value;
+ const code="SM-"+Math.random().toString(36).slice(2,7).toUpperCase();
+ const {error}=await db.from("bookings").insert({code,table_id:t.id,customer_name:n,phone:w,players:+$("p").value,start_ts:ts(d,s),end_ts:ts(d,s+st.dur),duration:st.dur,total:c.total,status:req?"pending":"approved"});
+ if(error){$("err").textContent=error.code=="23P01"?"Maaf, meja ini baru saja dibooking orang lain. Pilih meja atau jam lain.":"Gagal menyimpan: "+error.message;st.sel=null;await loadAv();return}
+ const msg=`Halo Seru! Mahjong, saya ${req?"REQUEST booking":"booking"}:\nKode: ${code}\nNama: ${n}\nMeja: ${t.id}\nTanggal: ${d}\nJam: ${pad(s)}:00-${pad((s+st.dur)%24)}:00 (${st.dur} jam)\nPemain: ${$("p").value}\nTotal: ${rp(c.total)}`+(req?"\nMohon konfirmasi, jam sebelum 15:00 perlu persetujuan.":"");
+ $("bc").textContent=code;
+ $("bd").innerHTML=`${esc(n)}, meja ${t.id}, ${d} pukul ${pad(s)}:00 selama ${st.dur} jam. Total ${rp(c.total)}.${req?"<br><b>Status: menunggu persetujuan admin.</b>":""}<br><br><a class="main" style="background:#25D366" href="https://wa.me/${WA}?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">Kirim ke WhatsApp</a>`;
+ $("sum").classList.add("hide");$("done").classList.remove("hide")};
+
+/* ---- ADMIN ---- */
+async function loadAdm(){
+ const {data,error}=await db.from("bookings").select("*").gte("start_ts",ts($("ad").value,0)).lt("start_ts",ts($("ad").value,24)).order("start_ts");
+ if(error){$("list").innerHTML=`<p class="err">${esc(error.message)}</p>`;return}
+ $("list").innerHTML=data.length?data.map(b=>{
+  const ph=b.phone.startsWith("0")?"62"+b.phone.slice(1):b.phone,hh=x=>x.slice(11,16);
+  const wa=`https://wa.me/${ph}?text=${encodeURIComponent(`Halo ${b.customer_name}, booking ${b.code} meja ${b.table_id} (${hh(b.start_ts)}-${hh(b.end_ts)}) `+(b.status=="rejected"?"belum bisa kami setujui. Mohon maaf.":"sudah kami konfirmasi. Sampai jumpa!"))}`;
+  return `<div class="bk"><b>${b.table_id}</b> · ${hh(b.start_ts)}–${hh(b.end_ts)} · ${esc(b.customer_name)} (${b.players} org)<br>${esc(b.code)} · ${rp(b.total)} · <span class="st ${b.status}">${b.status}</span><br>
+  ${b.status=="pending"?`<button class="b" data-a="approved" data-i="${b.id}">Setujui</button><button class="b" data-a="rejected" data-i="${b.id}">Tolak</button>`:""}
+  ${b.status=="approved"?`<button class="b" data-a="cancelled" data-i="${b.id}">Batalkan</button>`:""}<a class="b" href="${wa}" target="_blank" rel="noopener">Chat WA</a></div>`}).join(""):`<p class="note">Belum ada booking pada tanggal ini.</p>`;
+ document.querySelectorAll("#list [data-a]").forEach(b=>b.onclick=async()=>{await db.from("bookings").update({status:b.dataset.a}).eq("id",b.dataset.i);loadAdm()})}
+async function showAdm(){const {data}=await db.auth.getSession();const ok=!!data.session;$("login").classList.toggle("hide",ok);$("panel").classList.toggle("hide",!ok);if(ok)loadAdm()}
+$("lgo").onclick=async()=>{const {error}=await db.auth.signInWithPassword({email:$("em").value,password:$("pw").value});$("lerr").textContent=error?"Login gagal: "+error.message:"";showAdm()};
+$("out").onclick=async()=>{await db.auth.signOut();showAdm()};$("ref").onclick=loadAdm;$("ad").onchange=loadAdm;
+if(location.hash=="#admin"){$("cust").classList.add("hide");$("adm").classList.remove("hide");showAdm()}else loadAv();
+</script>
+</body>
+</html>
