@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Seru! Mahjong – Booking Meja</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<style>
+:root{--bg:#FCF8F2;--card:#fff;--ink:#0F2D52;--mute:#5b6b80;--line:#e3dccf;--sage:#B5CC95;--blue:#8FB0DD;--acc:#E8832A;--gray:#cfd3d8;--kit:#A9C1CD;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--bg:#0d1a2b;--card:#15263d;--ink:#eef2f8;--mute:#a3b2c5;--line:#2a3d57;--gray:#3a4655;--kit:#3b5568;color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.45;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+main{max-width:640px;margin:0 auto;padding:16px}
+h1{font-size:1.5rem;margin:0}h1 span{color:var(--acc)}
+.sub{color:var(--mute);margin:2px 0 12px;font-size:.9rem}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+h2{font-size:1rem;margin:0 0 10px}
+.row{display:flex;gap:8px;flex-wrap:wrap}.col{flex:1;min-width:120px}
+label{font-size:.8rem;color:var(--mute);display:block;margin-bottom:3px}
+input,select{width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);font-size:1rem}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.chip{padding:9px 14px;border:1px solid var(--line);border-radius:999px;background:var(--bg);color:var(--ink);cursor:pointer;font-size:.9rem}
+.chip.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+svg{width:100%;height:auto;display:block}
+.tbl{cursor:pointer}.tbl.busy{cursor:not-allowed}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:.8rem;color:var(--mute);margin-top:8px}
+.dot{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+table{width:100%;border-collapse:collapse;font-size:.88rem}td,th{padding:5px 2px}th{font-size:.75rem;color:var(--mute);text-align:right;font-weight:600}th:first-child{text-align:left}
+.tot td{border-top:1px solid var(--line);font-weight:700;padding-top:8px}.r{text-align:right}
+button.main,a.main{display:block;width:100%;padding:14px;border:0;border-radius:12px;background:var(--acc);color:#fff;font-weight:700;font-size:1rem;cursor:pointer;text-align:center;text-decoration:none;margin-top:8px}
+button.main:disabled{background:var(--gray);color:var(--mute);cursor:not-allowed}
+.note{font-size:.8rem;color:var(--mute)}.err{color:var(--acc);font-size:.85rem;min-height:1em}
+.hide{display:none}.code{font-size:1.6rem;letter-spacing:.15em;font-weight:800;color:var(--acc);text-align:center}
+.bk{border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:8px;font-size:.9rem}
+.b{padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);cursor:pointer;margin:6px 6px 0 0;text-decoration:none;display:inline-block;font-size:.85rem}
+.st{font-weight:700}.st.pending{color:var(--acc)}.st.approved{color:#2e8b57}.st.rejected,.st.cancelled{color:var(--mute)}
+.stats{display:flex;gap:8px;margin:10px 0 0}.stats div{flex:1;background:var(--bg);border-radius:10px;padding:8px;text-align:center;font-size:.75rem;color:var(--mute)}.stats b{display:block;font-size:1.05rem;color:var(--ink)}
+</style>
+</head>
+<body>
+<main>
+<h1>Seru! <span>Mahjong</span></h1>
+<p class="sub" id="sub">Tanya Social House</p>
+<p class="err" id="boot"></p>
+
+<!-- PELANGGAN -->
+<div id="cust">
+<div class="chips"><button class="chip on" data-v="v1">Booking</button><button class="chip" data-v="v2">Cek / Batalkan Booking</button></div>
+<div id="v1">
+<div class="card"><h2>Daftar harga</h2><table id="ptab"></table></div>
+<div class="card"><h2>1 · Tanggal, jam &amp; durasi</h2>
+<div class="row"><div class="col"><label for="d">Tanggal</label><input type="date" id="d"></div>
+<div class="col"><label for="s">Jam mulai</label><select id="s"></select></div></div>
+<label style="margin-top:10px">Durasi</label><div class="chips" id="dur" style="margin-bottom:0"></div>
+<p class="note" id="dayinfo" style="margin:8px 0 0"></p></div>
+<div class="card"><h2>2 · Pilih meja</h2>
+<div class="chips" id="flt" style="margin-bottom:8px"></div>
+<svg id="map" viewBox="0 0 400 450" role="img" aria-label="Denah ruang mahjong"></svg>
+<div class="legend"><span><i class="dot" style="background:var(--sage)"></i>Manual</span><span><i class="dot" style="background:var(--blue)"></i>Otomatis</span><span><i class="dot" style="background:var(--gray)"></i>✕ Terisi</span><span><i class="dot" style="background:var(--acc)"></i>Dipilih</span></div></div>
+<div class="card" id="sum"><h2>3 · Ringkasan &amp; data diri</h2><table id="rows"></table>
+<div class="row" style="margin-top:12px"><div class="col"><label for="n">Nama</label><input id="n" placeholder="Nama lengkap"></div>
+<div class="col"><label for="w">No. WhatsApp</label><input id="w" inputmode="tel" placeholder="08xxxxxxxxxx"></div>
+<div class="col" style="max-width:110px"><label for="p">Pemain</label><select id="p"><option>1</option><option>2</option><option>3</option><option selected>4</option></select></div></div>
+<p class="err" id="err"></p><button class="main" id="go" disabled>Pilih meja dulu</button></div>
+<div class="card hide" id="done"><h2>Booking tercatat 🎉</h2><div class="code" id="bc"></div><p id="bd"></p>
+<p class="note">Simpan kode booking ini untuk cek status atau pembatalan. Booking sah setelah admin konfirmasi lewat WhatsApp.</p>
+<button class="main" onclick="location.reload()">Booking lagi</button></div>
+</div>
+<div id="v2" class="hide"><div class="card"><h2>Cek status booking</h2>
+<div class="row"><div class="col"><label for="cc">Kode booking</label><input id="cc" placeholder="SM-XXXXX"></div><div class="col"><label for="cp">No. WhatsApp</label><input id="cp" inputmode="tel"></div></div>
+<p class="err" id="cerr"></p><button class="main" id="cgo">Cek</button><div id="cres"></div></div></div>
+</div>
+
+<!-- ADMIN: buka dengan #admin -->
+<div id="adm" class="hide">
+<div class="card" id="login"><h2>Login admin</h2><label for="em">Email</label><input id="em" type="email">
+<label for="pw" style="margin-top:8px">Password</label><input id="pw" type="password"><p class="err" id="lerr"></p><button class="main" id="lgo">Masuk</button></div>
+<div id="panel" class="hide">
+<div class="chips"><button class="chip on" data-t="t1">Booking</button><button class="chip" data-t="t2">Walk-in/Blokir</button><button class="chip" data-t="t3">Harga</button><button class="chip" data-t="t4">Pengaturan</button><button class="chip" id="out">Keluar</button></div>
+<div id="t1"><div class="card"><div class="row"><div class="col"><label for="ad">Tanggal</label><input type="date" id="ad"></div></div>
+<div class="stats" id="stats"></div><button class="b" id="csv">Ekspor CSV bulan ini</button></div><div id="list"></div></div>
+<div id="t2" class="hide"><div class="card"><h2>Booking walk-in atau blokir meja</h2><div class="row">
+<div class="col"><label for="wt">Meja</label><select id="wt"></select></div><div class="col"><label for="wd">Tanggal</label><input type="date" id="wd"></div>
+<div class="col"><label for="ws">Jam mulai</label><select id="ws"></select></div><div class="col"><label for="wh">Durasi (jam)</label><select id="wh"></select></div></div>
+<label for="wn" style="margin-top:8px">Nama (kosongkan jika blokir)</label><input id="wn" placeholder="Nama tamu walk-in">
+<label style="margin-top:8px"><input type="checkbox" id="wb" style="width:auto"> Blokir meja (maintenance/acara), tanpa tarif</label>
+<p class="err" id="werr"></p><button class="main" id="wgo">Simpan</button></div></div>
+<div id="t3" class="hide"><div class="card"><h2>Harga (Rp)</h2><table id="pedit"></table><p class="err" id="perr"></p><button class="main" id="psave">Simpan harga</button></div></div>
+<div id="t4" class="hide"><div class="card"><h2>Pengaturan</h2><div class="row">
+<div class="col"><label for="so">Jam buka reguler</label><input id="so" type="number" min="0" max="23"></div><div class="col"><label for="sr">Jam mulai request</label><input id="sr" type="number" min="0" max="23"></div>
+<div class="col"><label for="sm">Maks. hari ke depan</label><input id="sm" type="number" min="1"></div><div class="col"><label for="sc">Batal maks. (jam sebelum)</label><input id="sc" type="number" min="0"></div></div>
+<label for="sw" style="margin-top:8px">Nomor WhatsApp admin (62...)</label><input id="sw" inputmode="tel"><p class="err" id="serr"></p><button class="main" id="ssave">Simpan pengaturan</button></div>
+<div class="card"><h2>Hari libur (tarif weekend)</h2><div class="row"><div class="col"><input type="date" id="hd"></div><div class="col"><input id="hn" placeholder="Nama libur"></div></div><button class="main" id="hadd">Tambah</button><div id="hlist" style="margin-top:8px"></div></div></div>
+</div></div>
+</main>
+
+<script>
+/* ====== ISI DUA BARIS INI (Supabase → Project Settings → API) ====== */
+const SB_URL="ISI_PROJECT_URL",SB_KEY="ISI_ANON_PUBLIC_KEY";
+/* =================================================================== */
+const db=supabase.createClient(SB_URL,SB_KEY);
+const TABLES=[{id:"M4",t:"manual",x:325,y:95},{id:"M3",t:"manual",x:290,y:200},{id:"M2",t:"manual",x:325,y:310},{id:"A1",t:"auto",x:185,y:310},{id:"M1",t:"manual",x:65,y:310}];
+const $=id=>document.getElementById(id),pad=n=>String(n).padStart(2,"0"),rp=n=>"Rp"+Number(n).toLocaleString("id-ID");
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const ts=(d,h)=>new Date(new Date(d+"T00:00:00Z").getTime()+h*3600000).toISOString().slice(0,19);
+const hh=x=>x.slice(11,16),now=new Date(),today=now.getFullYear()+"-"+pad(now.getMonth()+1)+"-"+pad(now.getDate());
+let PR={},S={},HD=new Set(),OPEN=15,FROM=8;const st={dur:1,sel:null,flt:"all",av:[]};
+const dEl=$("d"),sEl=$("s");
+const isWE=d=>{const g=new Date(d+"T00:00:00").getDay();return g==0||g==6||HD.has(d)};
+const P=(t,we,h)=>PR[t+"|"+(we?"weekend":"weekday")+"|"+h];
+function calc(type,d,we){const p1=P(type,we,1),p3=P(type,we,3),n3=Math.floor(d/3),r=d%3,rows=[];
+ if(n3)rows.push([n3+" × paket 3 jam",n3*p3]);if(r){const a=r*p1;rows.push(a>p3?["Paket 3 jam (lebih hemat dari "+r+" jam)",p3]:[r+" × 1 jam",a])}
+ const total=rows.reduce((a,b)=>a+b[1],0);return{rows,total,save:d*p1-total}}
+function fillHours(sel,from,def){sel.innerHTML="";for(let h=from;h<=23;h++){const o=document.createElement("option");o.value=h;o.textContent=pad(h)+":00"+(h<OPEN?" (request)":"");if(h==def)o.selected=true;sel.appendChild(o)}}
+async function boot(){
+ const [p,s,h]=await Promise.all([db.from("prices").select("*"),db.from("settings").select("*"),db.from("holidays").select("date")]);
+ if(p.error||!p.data||!p.data.length){$("boot").textContent="Gagal memuat harga. Pastikan migrasi-v2.sql sudah dijalankan.";return false}
+ PR={};p.data.forEach(r=>PR[r.table_type+"|"+r.day_type+"|"+r.hours]=r.price);
+ S={};(s.data||[]).forEach(r=>S[r.key]=r.value);HD=new Set((h.data||[]).map(r=>r.date));
+ OPEN=+S.open_hour||15;FROM=+S.request_from||8;
+ $("sub").textContent="Tanya Social House · buka "+pad(OPEN)+":00–00:00 · "+pad(FROM)+":00–"+pad(OPEN)+":00 by request";
+ return true}
+/* ---- PELANGGAN ---- */
+function initCust(){
+ dEl.value=dEl.min=today;dEl.max=new Date(now.getTime()+(+S.max_days||30)*864e5).toISOString().slice(0,10);fillHours(sEl,FROM,OPEN);
+ const r=(t,l)=>`<tr><td>${l}</td><td class="r">${rp(P(t,0,1))}</td><td class="r">${rp(P(t,0,3))}</td><td class="r">${rp(P(t,1,1))}</td><td class="r">${rp(P(t,1,3))}</td></tr>`;
+ $("ptab").innerHTML=`<tr><th></th><th>Weekday 1j</th><th>3j</th><th>Weekend 1j</th><th>3j</th></tr>`+r("auto","Otomatis (A1)")+r("manual","Manual (M1–M4)");
+ [1,2,3,4,5,6].forEach(h=>{const b=document.createElement("button");b.className="chip";b.dataset.h=h;b.textContent=h==3?"3 jam (paket)":h+" jam";b.onclick=()=>{st.dur=h;render()};$("dur").appendChild(b)});
+ [["all","Semua"],["auto","Otomatis"],["manual","Manual"]].forEach(([k,l])=>{const b=document.createElement("button");b.className="chip";b.dataset.k=k;b.textContent=l;b.onclick=()=>{st.flt=k;render()};$("flt").appendChild(b)});
+ dEl.onchange=sEl.onchange=()=>{st.sel=null;loadAv()};loadAv()}
+async function loadAv(){const {data}=await db.from("availability").select("*").gte("start_ts",ts(dEl.value,0)).lt("start_ts",ts(dEl.value,24));st.av=data||[];render()}
+function free(id){const s=+sEl.value;if(s+st.dur>24)return false;const a=ts(dEl.value,s),b=ts(dEl.value,s+st.dur);return !st.av.some(r=>r.table_id==id&&r.start_ts<b&&r.end_ts>a)}
+const chair=(x,y)=>`<rect x="${x-9}" y="${y-9}" width="18" height="18" rx="4" fill="none" stroke="var(--ink)" stroke-opacity=".5" transform="rotate(45 ${x} ${y})"/>`;
+function render(){
+ document.querySelectorAll("#dur .chip").forEach(b=>b.classList.toggle("on",+b.dataset.h==st.dur));
+ document.querySelectorAll("#flt .chip").forEach(b=>b.classList.toggle("on",b.dataset.k==st.flt));
+ const we=isWE(dEl.value),s=+sEl.value,req=s<OPEN;
+ $("dayinfo").innerHTML=(we?"Weekend/libur":"Weekday")+" · selesai "+pad((s+st.dur)%24)+":00"+(s+st.dur>24?" (melewati jam tutup)":"")+(req?`<br><b style="color:var(--acc)">Jam ${pad(FROM)}:00–${pad(OPEN)}:00 = request, menunggu persetujuan admin. Jika tidak disetujui, booking dibatalkan.</b>`:"");
+ if(st.sel&&!free(st.sel))st.sel=null;
+ let g=`<rect x="8" y="8" width="384" height="370" rx="18" fill="none" stroke="var(--ink)" stroke-width="4"/>
+ <path d="M8 26Q8 8 26 8H150V90L120 120H8Z" fill="var(--kit)" fill-opacity=".55"/>
+ <text x="20" y="55" font-size="15" font-style="italic" fill="var(--ink)">Area Kitchen</text><text x="205" y="30" font-size="12" font-style="italic" fill="var(--ink)">Toilet</text>
+ <circle cx="200" cy="215" r="34" fill="none" stroke="var(--acc)" stroke-dasharray="4 3"/>
+ <text x="200" y="212" text-anchor="middle" font-size="8" font-weight="700" fill="var(--acc)">AREA</text><text x="200" y="222" text-anchor="middle" font-size="8" font-weight="700" fill="var(--acc)">SIRKULASI</text>
+ <line x1="206" y1="45" x2="206" y2="175" stroke="var(--acc)" stroke-dasharray="5 4"/><line x1="206" y1="256" x2="206" y2="352" stroke="var(--acc)" stroke-dasharray="5 4"/><line x1="160" y1="215" x2="40" y2="215" stroke="var(--acc)" stroke-dasharray="5 4"/>
+ <rect x="236" y="374" width="150" height="9" rx="2" fill="none" stroke="var(--ink)" stroke-width="2"/><text x="240" y="412" font-size="11" font-weight="700" fill="var(--ink)">▲ PINTU MASUK</text>
+ <rect x="8" y="378" width="205" height="50" fill="none" stroke="var(--ink)" stroke-width="2" stroke-dasharray="3 3"/><text x="110" y="408" text-anchor="middle" font-size="10" fill="var(--mute)">Tangga</text>`;
+ TABLES.forEach(t=>{const f=free(t.id),sel=st.sel==t.id,dim=st.flt!="all"&&st.flt!=t.t;
+  const fill=sel?"var(--acc)":!f?"var(--gray)":t.t=="auto"?"var(--blue)":"var(--sage)";
+  g+=`<g opacity="${dim?.25:1}" class="tbl ${f?"":"busy"}" data-id="${t.id}" tabindex="${f&&!dim?0:-1}" role="button" aria-label="Meja ${t.id} ${f?"tersedia":"terisi"}">`;
+  [[-28,-28],[28,-28],[-28,28],[28,28]].forEach(c=>g+=chair(t.x+c[0],t.y+c[1]));
+  g+=`<rect x="${t.x-26}" y="${t.y-26}" width="52" height="52" rx="8" fill="${fill}" stroke="var(--ink)" stroke-opacity=".6" transform="rotate(45 ${t.x} ${t.y})"/>
+  <text x="${t.x}" y="${t.y+6}" text-anchor="middle" font-size="17" font-weight="800" fill="${sel?"#fff":"#0F2D52"}">${t.id}</text>${f?"":`<text x="${t.x}" y="${t.y+20}" text-anchor="middle" font-size="9" font-weight="700" fill="#0F2D52">✕ terisi</text>`}</g>`});
+ $("map").innerHTML=g;
+ document.querySelectorAll(".tbl").forEach(e=>{const pick=()=>{const t=TABLES.find(x=>x.id==e.dataset.id);if(!free(t.id)||(st.flt!="all"&&st.flt!=t.t))return;st.sel=t.id;render()};
+  e.onclick=pick;e.onkeydown=k=>{if(k.key=="Enter"||k.key==" "){k.preventDefault();pick()}}});
+ const t=TABLES.find(x=>x.id==st.sel);
+ if(!t){$("rows").innerHTML=`<tr><td class="note">Belum ada meja dipilih</td></tr>`;$("go").disabled=true;$("go").textContent="Pilih meja dulu";return}
+ const c=calc(t.t,st.dur,we);
+ let h=`<tr><td>Meja ${t.id} (${t.t=="auto"?"Otomatis":"Manual"})</td><td class="r">${we?"Weekend":"Weekday"}</td></tr><tr><td>${dEl.value} · ${pad(s)}:00–${pad((s+st.dur)%24)}:00</td><td class="r">${st.dur} jam</td></tr>`;
+ c.rows.forEach(r=>h+=`<tr><td>${r[0]}</td><td class="r">${rp(r[1])}</td></tr>`);
+ if(c.save>0)h+=`<tr><td style="color:var(--acc)">Hemat dengan paket</td><td class="r" style="color:var(--acc)">${rp(c.save)}</td></tr>`;
+ $("rows").innerHTML=h+`<tr class="tot"><td>Total</td><td class="r">${rp(c.total)}</td></tr>`;
+ $("go").disabled=false;$("go").textContent=(req?"Kirim request · ":"Booking · ")+rp(c.total)}
+$("go").onclick=async()=>{
+ const n=$("n").value.trim(),w=$("w").value.replace(/\D/g,"");
+ if(n.length<2){$("err").textContent="Isi nama dulu.";return}if(w.length<9){$("err").textContent="Nomor WhatsApp belum valid.";return}
+ $("err").textContent="";$("go").disabled=true;
+ const t=TABLES.find(x=>x.id==st.sel),d=dEl.value,c=calc(t.t,st.dur,isWE(d)),s=+sEl.value,req=s<OPEN;
+ const code="SM-"+Math.random().toString(36).slice(2,7).toUpperCase();
+ const {error}=await db.from("bookings").insert({code,table_id:t.id,customer_name:n,phone:w,players:+$("p").value,start_ts:ts(d,s),end_ts:ts(d,s+st.dur),duration:st.dur,total:c.total,status:req?"pending":"approved"});
+ if(error){$("err").textContent=error.code=="23P01"?"Maaf, meja ini baru saja dibooking orang lain. Pilih meja atau jam lain.":"Gagal menyimpan: "+error.message;st.sel=null;await loadAv();return}
+ const msg=`Halo Seru! Mahjong, saya ${req?"REQUEST booking":"booking"}:\nKode: ${code}\nNama: ${n}\nMeja: ${t.id}\nTanggal: ${d}\nJam: ${pad(s)}:00-${pad((s+st.dur)%24)}:00 (${st.dur} jam)\nPemain: ${$("p").value}\nTotal: ${rp(c.total)}`+(req?"\nMohon konfirmasi, jam sebelum "+pad(OPEN)+":00 perlu persetujuan.":"");
+ $("bc").textContent=code;
+ $("bd").innerHTML=`${esc(n)}, meja ${t.id}, ${d} pukul ${pad(s)}:00 selama ${st.dur} jam. Total ${rp(c.total)}.${req?"<br><b>Status: menunggu persetujuan admin.</b>":""}<a class="main" style="background:#25D366" href="https://wa.me/${S.wa}?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">Kirim ke WhatsApp</a>`;
+ $("sum").classList.add("hide");$("done").classList.remove("hide")};
+document.querySelectorAll("[data-v]").forEach(b=>b.onclick=()=>{document.querySelectorAll("[data-v]").forEach(x=>x.classList.toggle("on",x==b));["v1","v2"].forEach(i=>$(i).classList.toggle("hide",i!=b.dataset.v))});
+async function check(){
+ const code=$("cc").value,ph=$("cp").value;$("cerr").textContent="";
+ const {data,error}=await db.rpc("check_booking",{p_code:code,p_phone:ph});
+ if(error||!data||!data.length){$("cres").innerHTML="";$("cerr").textContent="Booking tidak ditemukan. Cek kode dan nomor WhatsApp.";return}
+ const b=data[0],L={pending:"Menunggu persetujuan admin",approved:"Dikonfirmasi",rejected:"Tidak disetujui",cancelled:"Dibatalkan"};
+ const can=(b.status=="pending"||b.status=="approved");
+ $("cres").innerHTML=`<div class="bk" style="margin-top:12px"><b>${esc(b.code)}</b> · Meja ${b.table_id}<br>${b.start_ts.slice(0,10)} · ${hh(b.start_ts)}–${hh(b.end_ts)} · ${rp(b.total)}<br>Status: <span class="st ${b.status}">${L[b.status]}</span></div>`+
+  (can?`<button class="b" id="cx">Batalkan booking</button><a class="b" target="_blank" rel="noopener" href="https://wa.me/${S.wa}?text=${encodeURIComponent("Halo, saya mau reschedule booking "+b.code)}">Reschedule via WA</a><p class="note">Pembatalan hanya bisa maksimal ${S.cancel_hours||3} jam sebelum jam mulai.</p>`:"");
+ if(can)$("cx").onclick=async()=>{if(!confirm("Batalkan booking ini?"))return;const r=await db.rpc("cancel_booking",{p_code:code,p_phone:ph});$("cerr").textContent=r.data?"Booking dibatalkan.":"Tidak bisa dibatalkan (sudah terlalu dekat dengan jam mulai). Hubungi admin lewat WhatsApp.";check()}}
+$("cgo").onclick=check;
+/* ---- ADMIN ---- */
+const mo=d=>d.slice(0,7);const nextMo=d=>{const x=new Date(d.slice(0,7)+"-01T00:00:00Z");x.setUTCMonth(x.getUTCMonth()+1);return x.toISOString().slice(0,10)+"T00:00:00"};
+async function loadAdm(){
+ const d=$("ad").value;
+ const {data,error}=await db.from("bookings").select("*").gte("start_ts",ts(d,0)).lt("start_ts",ts(d,24)).order("start_ts");
+ if(error){$("list").innerHTML=`<p class="err">${esc(error.message)}</p>`;return}
+ const m=await db.from("bookings").select("total").eq("status","approved").gte("start_ts",mo(d)+"-01T00:00:00").lt("start_ts",nextMo(d)).neq("customer_name","BLOKIR");
+ const rev=a=>a.reduce((x,b)=>x+b.total,0);
+ $("stats").innerHTML=`<div><b>${data.filter(b=>b.status!="rejected"&&b.status!="cancelled").length}</b>booking aktif</div><div><b>${data.filter(b=>b.status=="pending").length}</b>menunggu</div><div><b>${rp(rev(data.filter(b=>b.status=="approved")))}</b>hari ini</div><div><b>${rp(rev(m.data||[]))}</b>bulan ini</div>`;
+ $("list").innerHTML=data.length?data.map(b=>{
+  const ph=b.phone.startsWith("0")?"62"+b.phone.slice(1):b.phone;
+  const wa=`https://wa.me/${ph}?text=${encodeURIComponent(`Halo ${b.customer_name}, booking ${b.code} meja ${b.table_id} (${hh(b.start_ts)}-${hh(b.end_ts)}) `+(b.status=="rejected"?"belum bisa kami setujui. Mohon maaf.":"sudah kami konfirmasi. Sampai jumpa!"))}`;
+  return `<div class="bk"><b>${b.table_id}</b> · ${hh(b.start_ts)}–${hh(b.end_ts)} · ${esc(b.customer_name)} (${b.players} org)<br>${esc(b.code)} · ${rp(b.total)} · <span class="st ${b.status}">${b.status}</span><br>
+  ${b.status=="pending"?`<button class="b" data-a="approved" data-i="${b.id}">Setujui</button><button class="b" data-a="rejected" data-i="${b.id}">Tolak</button>`:""}
+  ${b.status=="approved"?`<button class="b" data-a="cancelled" data-i="${b.id}">Batalkan</button>`:""}${b.phone.length>5?`<a class="b" href="${wa}" target="_blank" rel="noopener">Chat WA</a>`:""}</div>`}).join(""):`<p class="note">Belum ada booking pada tanggal ini.</p>`;
+ document.querySelectorAll("#list [data-a]").forEach(b=>b.onclick=async()=>{await db.from("bookings").update({status:b.dataset.a}).eq("id",b.dataset.i);loadAdm()})}
+$("csv").onclick=async()=>{const d=$("ad").value;
+ const {data}=await db.from("bookings").select("*").gte("start_ts",mo(d)+"-01T00:00:00").lt("start_ts",nextMo(d)).order("start_ts");
+ const q=v=>'"'+String(v).replace(/"/g,'""')+'"',rows=[["kode","meja","nama","telepon","pemain","mulai","selesai","jam","total","status"]].concat((data||[]).map(b=>[b.code,b.table_id,b.customer_name,b.phone,b.players,b.start_ts,b.end_ts,b.duration,b.total,b.status]));
+ const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([rows.map(r=>r.map(q).join(",")).join("\n")],{type:"text/csv"}));a.download="booking-"+mo(d)+".csv";a.click()};
+function admInit(){
+ $("ad").value=$("wd").value=today;
+ $("wt").innerHTML=TABLES.map(t=>`<option>${t.id}</option>`).join("");fillHours($("ws"),8,15);
+ $("wh").innerHTML=[1,2,3,4,5,6].map(h=>`<option>${h}</option>`).join("");$("ad").onchange=loadAdm}
+$("wgo").onclick=async()=>{
+ const t=TABLES.find(x=>x.id==$("wt").value),d=$("wd").value,s=+$("ws").value,h=+$("wh").value,blk=$("wb").checked,nm=$("wn").value.trim();
+ if(s+h>24){$("werr").textContent="Melewati jam tutup.";return}if(!blk&&nm.length<2){$("werr").textContent="Isi nama tamu atau centang blokir.";return}
+ const total=blk?0:calc(t.t,h,isWE(d)).total;
+ const {error}=await db.from("bookings").insert({code:(blk?"BL-":"WI-")+Math.random().toString(36).slice(2,7).toUpperCase(),table_id:t.id,customer_name:blk?"BLOKIR":nm,phone:"-",players:4,start_ts:ts(d,s),end_ts:ts(d,s+h),duration:h,total,status:"approved"});
+ $("werr").textContent=error?(error.code=="23P01"?"Meja sudah terisi pada jam tersebut.":error.message):"Tersimpan.";if(!error){$("wn").value="";$("ad").value=d;loadAdm()}};
+async function loadPrices(){
+ const {data}=await db.from("prices").select("*");PR={};(data||[]).forEach(r=>PR[r.table_type+"|"+r.day_type+"|"+r.hours]=r.price);
+ const row=(t,l)=>`<tr><td>${l}</td>`+["weekday","weekend"].map(dy=>[1,3].map(h=>`<td><input type="number" min="0" step="1000" data-k="${t}|${dy}|${h}" value="${P(t,dy=="weekend",h)}"></td>`).join("")).join("")+"</tr>";
+ $("pedit").innerHTML=`<tr><th></th><th>WD 1j</th><th>WD 3j</th><th>WE 1j</th><th>WE 3j</th></tr>`+row("auto","Otomatis")+row("manual","Manual")}
+$("psave").onclick=async()=>{
+ const rows=[...document.querySelectorAll("#pedit input")].map(i=>{const [t,dy,h]=i.dataset.k.split("|");return{table_type:t,day_type:dy,hours:+h,price:+i.value}});
+ const {error}=await db.from("prices").upsert(rows);$("perr").textContent=error?error.message:"Harga tersimpan. Berlaku untuk booking berikutnya."};
+function loadSet(){$("so").value=OPEN;$("sr").value=FROM;$("sm").value=S.max_days||30;$("sc").value=S.cancel_hours||3;$("sw").value=S.wa||"";loadHol()}
+$("ssave").onclick=async()=>{
+ const rows=[["open_hour",$("so").value],["request_from",$("sr").value],["max_days",$("sm").value],["cancel_hours",$("sc").value],["wa",$("sw").value.replace(/\D/g,"")]].map(([key,value])=>({key,value:String(value)}));
+ const {error}=await db.from("settings").upsert(rows);$("serr").textContent=error?error.message:"Tersimpan. Muat ulang halaman pelanggan untuk melihat perubahan."};
+async function loadHol(){
+ const {data}=await db.from("holidays").select("*").order("date");
+ $("hlist").innerHTML=(data||[]).map(h=>`<div class="bk">${h.date} · ${esc(h.name||"")} <button class="b" data-del="${h.date}">Hapus</button></div>`).join("")||`<p class="note">Belum ada hari libur.</p>`;
+ document.querySelectorAll("[data-del]").forEach(b=>b.onclick=async()=>{await db.from("holidays").delete().eq("date",b.dataset.del);loadHol()})}
+$("hadd").onclick=async()=>{if(!$("hd").value)return;await db.from("holidays").upsert({date:$("hd").value,name:$("hn").value});$("hn").value="";loadHol()};
+document.querySelectorAll("[data-t]").forEach(b=>b.onclick=()=>{document.querySelectorAll("[data-t]").forEach(x=>x.classList.toggle("on",x==b));["t1","t2","t3","t4"].forEach(i=>$(i).classList.toggle("hide",i!=b.dataset.t));
+ if(b.dataset.t=="t1")loadAdm();if(b.dataset.t=="t3")loadPrices();if(b.dataset.t=="t4")loadSet()});
+async function showAdm(){const {data}=await db.auth.getSession();const ok=!!data.session;$("login").classList.toggle("hide",ok);$("panel").classList.toggle("hide",!ok);if(ok)loadAdm()}
+$("lgo").onclick=async()=>{const {error}=await db.auth.signInWithPassword({email:$("em").value,password:$("pw").value});$("lerr").textContent=error?"Login gagal: "+error.message:"";showAdm()};
+$("out").onclick=async()=>{await db.auth.signOut();showAdm()};
+(async()=>{if(!await boot())return;
+ if(location.hash=="#admin"){$("cust").classList.add("hide");$("adm").classList.remove("hide");admInit();showAdm()}else initCust()})();
+</script>
+</body>
+</html>
