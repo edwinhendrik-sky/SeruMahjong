@@ -35,6 +35,19 @@ button.main:disabled{background:var(--gray);color:var(--mute);cursor:not-allowed
 .b{padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);cursor:pointer;margin:6px 6px 0 0;text-decoration:none;display:inline-block;font-size:.85rem}
 .st{font-weight:700}.st.pending{color:var(--acc)}.st.approved{color:#2e8b57}.st.rejected,.st.cancelled{color:var(--mute)}
 .stats{display:flex;gap:8px;margin:10px 0 0}.stats div{flex:1;background:var(--bg);border-radius:10px;padding:8px;text-align:center;font-size:.75rem;color:var(--mute)}.stats b{display:block;font-size:1.05rem;color:var(--ink)}
+.wk{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.days{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:10px}
+.dy{border:0;border-radius:10px;background:var(--bg);color:var(--ink);padding:6px 0;font-size:.72rem;cursor:pointer;display:flex;flex-direction:column;align-items:center}
+.dy b{font-size:1rem}.dy small{font-size:.6rem;color:var(--mute)}.dy.we{color:#d6452f}.dy.on{background:var(--ink);color:var(--bg)}.dy.on small{color:var(--bg)}
+.gridw{overflow-x:auto}.grid{table-layout:fixed;min-width:470px;border-collapse:collapse}
+.grid th{font-size:.7rem;text-align:center;padding:6px 2px;color:var(--ink)}
+.grid td.hr{width:46px;font-size:.72rem;color:var(--mute);vertical-align:top;text-align:right;padding-right:6px}
+.cl{height:34px;border:1px solid var(--line);font-size:.65rem;padding:2px 4px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;max-width:0}
+.cl.free{cursor:pointer}.cl.free:hover{background:var(--sage)}.cl.free.req{background:rgba(232,131,42,.07)}
+.cl.past{background:var(--bg);cursor:default;opacity:.5}.cl.past:hover{background:var(--bg)}
+.cl.approved{background:rgba(232,131,42,.3);cursor:pointer}
+.cl.pending{background:repeating-linear-gradient(45deg,rgba(240,190,50,.4),rgba(240,190,50,.4) 5px,transparent 5px,transparent 10px);cursor:pointer}
+.cl.bus{background:var(--gray);color:var(--mute)}.cl.blk{background:var(--mute);color:var(--bg);cursor:pointer}
 </style>
 </head>
 <body>
@@ -45,7 +58,7 @@ button.main:disabled{background:var(--gray);color:var(--mute);cursor:not-allowed
 
 <!-- PELANGGAN -->
 <div id="cust">
-<div class="chips"><button class="chip on" data-v="v1">Booking</button><button class="chip" data-v="v2">Cek / Batalkan Booking</button></div>
+<div class="chips"><button class="chip on" data-v="v1">Booking</button><button class="chip" data-v="v3">Jadwal Meja</button><button class="chip" data-v="v2">Cek / Batalkan Booking</button></div>
 <div id="v1">
 <div class="card"><h2>Daftar harga</h2><table id="ptab"></table></div>
 <div class="card"><h2>1 · Tanggal, jam &amp; durasi</h2>
@@ -66,6 +79,7 @@ button.main:disabled{background:var(--gray);color:var(--mute);cursor:not-allowed
 <p class="note">Simpan kode booking ini untuk cek status atau pembatalan. Booking sah setelah admin konfirmasi lewat WhatsApp.</p>
 <button class="main" onclick="location.reload()">Booking lagi</button></div>
 </div>
+<div id="v3" class="hide"><div class="card"><h2>Jadwal meja</h2><div id="schC"></div></div></div>
 <div id="v2" class="hide"><div class="card"><h2>Cek status booking</h2>
 <div class="row"><div class="col"><label for="cc">Kode booking</label><input id="cc" placeholder="SM-XXXXX"></div><div class="col"><label for="cp">No. WhatsApp</label><input id="cp" inputmode="tel"></div></div>
 <p class="err" id="cerr"></p><button class="main" id="cgo">Cek</button><div id="cres"></div></div></div>
@@ -76,9 +90,10 @@ button.main:disabled{background:var(--gray);color:var(--mute);cursor:not-allowed
 <div class="card" id="login"><h2>Login admin</h2><label for="em">Email</label><input id="em" type="email">
 <label for="pw" style="margin-top:8px">Password</label><input id="pw" type="password"><p class="err" id="lerr"></p><button class="main" id="lgo">Masuk</button></div>
 <div id="panel" class="hide">
-<div class="chips"><button class="chip on" data-t="t1">Booking</button><button class="chip" data-t="t2">Walk-in/Blokir</button><button class="chip" data-t="t3">Harga</button><button class="chip" data-t="t4">Pengaturan</button><button class="chip" id="out">Keluar</button></div>
+<div class="chips"><button class="chip on" data-t="t1">Booking</button><button class="chip" data-t="t5">Jadwal</button><button class="chip" data-t="t2">Walk-in/Blokir</button><button class="chip" data-t="t3">Harga</button><button class="chip" data-t="t4">Pengaturan</button><button class="chip" id="out">Keluar</button></div>
 <div id="t1"><div class="card"><div class="row"><div class="col"><label for="ad">Tanggal</label><input type="date" id="ad"></div></div>
 <div class="stats" id="stats"></div><button class="b" id="csv">Ekspor CSV bulan ini</button></div><div id="list"></div></div>
+<div id="t5" class="hide"><div class="card"><div id="schA"></div></div></div>
 <div id="t2" class="hide"><div class="card"><h2>Booking walk-in atau blokir meja</h2><div class="row">
 <div class="col"><label for="wt">Meja</label><select id="wt"></select></div><div class="col"><label for="wd">Tanggal</label><input type="date" id="wd"></div>
 <div class="col"><label for="ws">Jam mulai</label><select id="ws"></select></div><div class="col"><label for="wh">Durasi (jam)</label><select id="wh"></select></div></div>
@@ -96,7 +111,7 @@ button.main:disabled{background:var(--gray);color:var(--mute);cursor:not-allowed
 
 <script>
 /* ====== ISI DUA BARIS INI (Supabase → Project Settings → API) ====== */
-const SB_URL="https://xrhqmjwddcmgyzkudvvg.supabase.co",SB_KEY="sb_publishable_VC6ucwl5uwqRRKMtyngC5g_hHnyUtz3";
+const SB_URL="ISI_PROJECT_URL",SB_KEY="ISI_ANON_PUBLIC_KEY";
 /* =================================================================== */
 const db=supabase.createClient(SB_URL,SB_KEY);
 const TABLES=[{id:"M4",t:"manual",x:325,y:95},{id:"M3",t:"manual",x:290,y:200},{id:"M2",t:"manual",x:325,y:310},{id:"A1",t:"auto",x:185,y:310},{id:"M1",t:"manual",x:65,y:310}];
@@ -174,7 +189,7 @@ $("go").onclick=async()=>{
  $("bc").textContent=code;
  $("bd").innerHTML=`${esc(n)}, meja ${t.id}, ${d} pukul ${pad(s)}:00 selama ${st.dur} jam. Total ${rp(c.total)}.${req?"<br><b>Status: menunggu persetujuan admin.</b>":""}<a class="main" style="background:#25D366" href="https://wa.me/${S.wa}?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">Kirim ke WhatsApp</a>`;
  $("sum").classList.add("hide");$("done").classList.remove("hide")};
-document.querySelectorAll("[data-v]").forEach(b=>b.onclick=()=>{document.querySelectorAll("[data-v]").forEach(x=>x.classList.toggle("on",x==b));["v1","v2"].forEach(i=>$(i).classList.toggle("hide",i!=b.dataset.v))});
+document.querySelectorAll("[data-v]").forEach(b=>b.onclick=()=>{document.querySelectorAll("[data-v]").forEach(x=>x.classList.toggle("on",x==b));["v1","v2","v3"].forEach(i=>$(i).classList.toggle("hide",i!=b.dataset.v));if(b.dataset.v=="v3")SC.load()});
 async function check(){
  const code=$("cc").value,ph=$("cp").value;$("cerr").textContent="";
  const {data,error}=await db.rpc("check_booking",{p_code:code,p_phone:ph});
@@ -185,6 +200,40 @@ async function check(){
   (can?`<button class="b" id="cx">Batalkan booking</button><a class="b" target="_blank" rel="noopener" href="https://wa.me/${S.wa}?text=${encodeURIComponent("Halo, saya mau reschedule booking "+b.code)}">Reschedule via WA</a><p class="note">Pembatalan hanya bisa maksimal ${S.cancel_hours||3} jam sebelum jam mulai.</p>`:"");
  if(can)$("cx").onclick=async()=>{if(!confirm("Batalkan booking ini?"))return;const r=await db.rpc("cancel_booking",{p_code:code,p_phone:ph});$("cerr").textContent=r.data?"Booking dibatalkan.":"Tidak bisa dibatalkan (sudah terlalu dekat dengan jam mulai). Hubungi admin lewat WhatsApp.";check()}}
 $("cgo").onclick=check;
+/* ---- JADWAL: grid per meja & jam ---- */
+const COLS=["A1","M1","M2","M3","M4"],CN={A1:"Otomatis 1",M1:"Manual 1",M2:"Manual 2",M3:"Manual 3",M4:"Manual 4"},DN=["Min","Sen","Sel","Rab","Kam","Jum","Sab"],MN=["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agu","Sep","Okt","Nov","Des"];
+const addD=(d,n)=>new Date(new Date(d+"T00:00:00Z").getTime()+n*864e5).toISOString().slice(0,10);
+const mon=d=>addD(d,-((new Date(d+"T00:00:00Z").getUTCDay()+6)%7));
+const fmt=d=>+d.slice(8)+" "+MN[+d.slice(5,7)-1];
+function Sch(box,adm,onFree,onBusy){
+ let sel=today,rows=[];
+ async function load(){const w=mon(sel);let q=db.from(adm?"bookings":"availability").select("*");if(adm)q=q.in("status",["pending","approved"]);
+  const r=await q.gte("start_ts",w+"T00:00:00").lt("start_ts",addD(w,7)+"T00:00:00");rows=r.data||[];draw()}
+ function draw(){
+  const w=mon(sel),days=[0,1,2,3,4,5,6].map(i=>addD(w,i));
+  let h=`<div class="wk"><button class="b" data-n="-7">‹ Minggu lalu</button><b>${fmt(days[0])} – ${fmt(days[6])}</b><button class="b" data-n="7">Minggu depan ›</button></div><div class="days">`;
+  days.forEach(d=>{const c=rows.filter(r=>r.start_ts.slice(0,10)==d).length;
+   h+=`<button class="dy${d==sel?" on":""}${isWE(d)?" we":""}" data-d="${d}">${DN[new Date(d+"T00:00:00Z").getUTCDay()]}<b>${+d.slice(8)}</b><small>${c?c+" booking":"kosong"}</small></button>`});
+  h+=`</div><div class="gridw"><table class="grid"><tr><th></th>${COLS.map(c=>`<th>${CN[c]}</th>`).join("")}</tr>`;
+  for(let hr=FROM;hr<=23;hr++){
+   h+=`<tr><td class="hr">${pad(hr)}:00</td>`;
+   COLS.forEach(c=>{
+    const a=ts(sel,hr),b=ts(sel,hr+1),bk=rows.find(r=>r.table_id==c&&r.start_ts<b&&r.end_ts>a);
+    const past=new Date(sel+"T"+pad(hr)+":00:00")<new Date()||(!adm&&sel>dEl.max);
+    if(bk){const f=bk.start_ts>=a||hr==FROM,cls=adm?(bk.customer_name=="BLOKIR"?"blk":bk.status):"bus";
+     const lb=!f?"":adm?esc(bk.customer_name)+" "+hh(bk.start_ts)+"–"+hh(bk.end_ts):"Terisi";
+     h+=`<td class="cl ${cls}" data-t="${c}" data-b="1">${lb}</td>`}
+    else h+=`<td class="cl free${past?" past":""}${hr<OPEN?" req":""}" data-t="${c}" data-h="${hr}"></td>`});
+   h+="</tr>"}
+  h+=`</table></div><div class="legend"><span><i class="dot" style="background:var(--sage)"></i>Kosong (ketuk untuk ${adm?"isi walk-in":"booking"})</span>${adm?`<span><i class="dot" style="background:rgba(240,190,50,.6)"></i>Menunggu</span><span><i class="dot" style="background:rgba(232,131,42,.5)"></i>Dikonfirmasi</span><span><i class="dot" style="background:var(--mute)"></i>Blokir</span>`:`<span><i class="dot" style="background:var(--gray)"></i>Terisi</span>`}<span><i class="dot" style="background:rgba(232,131,42,.2)"></i>Jam request</span></div>`;
+  box.innerHTML=h;
+  box.querySelectorAll("[data-n]").forEach(e=>e.onclick=()=>{sel=addD(sel,+e.dataset.n);load()});
+  box.querySelectorAll("[data-d]").forEach(e=>e.onclick=()=>{const o=mon(sel);sel=e.dataset.d;mon(sel)==o?draw():load()});
+  box.querySelectorAll("td.free:not(.past)").forEach(e=>e.onclick=()=>onFree(sel,e.dataset.t,+e.dataset.h));
+  box.querySelectorAll("td[data-b]").forEach(e=>e.onclick=()=>onBusy&&onBusy(sel,e.dataset.t))}
+ return{load}}
+const SC=Sch($("schC"),false,async(d,c,h)=>{dEl.value=d;sEl.value=h;st.dur=1;st.sel=null;document.querySelector('[data-v="v1"]').click();await loadAv();if(free(c)){st.sel=c;render();$("sum").scrollIntoView({behavior:"smooth"})}});
+const SA=Sch($("schA"),true,(d,c,h)=>{$("wt").value=c;$("wd").value=d;$("ws").value=h;document.querySelector('[data-t="t2"]').click()},(d)=>{$("ad").value=d;document.querySelector('[data-t="t1"]').click()});
 /* ---- ADMIN ---- */
 const mo=d=>d.slice(0,7);const nextMo=d=>{const x=new Date(d.slice(0,7)+"-01T00:00:00Z");x.setUTCMonth(x.getUTCMonth()+1);return x.toISOString().slice(0,10)+"T00:00:00"};
 async function loadAdm(){
@@ -231,8 +280,8 @@ async function loadHol(){
  $("hlist").innerHTML=(data||[]).map(h=>`<div class="bk">${h.date} · ${esc(h.name||"")} <button class="b" data-del="${h.date}">Hapus</button></div>`).join("")||`<p class="note">Belum ada hari libur.</p>`;
  document.querySelectorAll("[data-del]").forEach(b=>b.onclick=async()=>{await db.from("holidays").delete().eq("date",b.dataset.del);loadHol()})}
 $("hadd").onclick=async()=>{if(!$("hd").value)return;await db.from("holidays").upsert({date:$("hd").value,name:$("hn").value});$("hn").value="";loadHol()};
-document.querySelectorAll("[data-t]").forEach(b=>b.onclick=()=>{document.querySelectorAll("[data-t]").forEach(x=>x.classList.toggle("on",x==b));["t1","t2","t3","t4"].forEach(i=>$(i).classList.toggle("hide",i!=b.dataset.t));
- if(b.dataset.t=="t1")loadAdm();if(b.dataset.t=="t3")loadPrices();if(b.dataset.t=="t4")loadSet()});
+document.querySelectorAll("[data-t]").forEach(b=>b.onclick=()=>{document.querySelectorAll("[data-t]").forEach(x=>x.classList.toggle("on",x==b));["t1","t2","t3","t4","t5"].forEach(i=>$(i).classList.toggle("hide",i!=b.dataset.t));
+ if(b.dataset.t=="t5")SA.load();if(b.dataset.t=="t1")loadAdm();if(b.dataset.t=="t3")loadPrices();if(b.dataset.t=="t4")loadSet()});
 async function showAdm(){const {data}=await db.auth.getSession();const ok=!!data.session;$("login").classList.toggle("hide",ok);$("panel").classList.toggle("hide",!ok);if(ok)loadAdm()}
 $("lgo").onclick=async()=>{const {error}=await db.auth.signInWithPassword({email:$("em").value,password:$("pw").value});$("lerr").textContent=error?"Login gagal: "+error.message:"";showAdm()};
 $("out").onclick=async()=>{await db.auth.signOut();showAdm()};
